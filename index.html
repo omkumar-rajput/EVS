@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Vertical Garden</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --green:        #1D9E75;
+      --green-dark:   #0F6E56;
+      --green-light:  #E1F5EE;
+      --green-mid:    #9FE1CB;
+      --purple:       #534AB7;
+      --purple-dark:  #3C3489;
+      --purple-light: #EEEDFE;
+      --amber-light:  #FAEEDA;
+      --amber-dark:   #854F0B;
+      --red-light:    #FCEBEB;
+      --red-dark:     #A32D2D;
+      --bg:           #F5F7F5;
+      --surface:      #ffffff;
+      --surface2:     #F0F4F2;
+      --border:       #D8E4DE;
+      --text:         #1a2e24;
+      --text2:        #5a7a6a;
+      --text3:        #8aaa9a;
+      --radius:       10px;
+      --radius-lg:    14px;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    .app { max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+
+    /* Header */
+    .header { display: flex; align-items: center; gap: 14px; margin-bottom: 1.5rem; }
+    .logo { width: 46px; height: 46px; background: var(--green); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .logo svg { width: 26px; height: 26px; fill: white; }
+    .header-text h1 { font-size: 22px; font-weight: 700; }
+    .header-text p  { font-size: 13px; color: var(--text2); margin-top: 2px; }
+    .api-status { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 5px 12px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; flex-shrink: 0; }
+    .dot.online { background: var(--green); }
+    .dot.offline { background: #E24B4A; }
+
+    /* Banner */
+    .eco-banner { background: var(--green-light); border: 1px solid var(--green-mid); border-radius: var(--radius-lg); padding: 12px 16px; margin-bottom: 1.5rem; display: flex; gap: 12px; align-items: center; }
+    .eco-banner p { font-size: 13px; color: var(--green-dark); line-height: 1.5; }
+
+    /* Nav */
+    nav { display: flex; gap: 4px; margin-bottom: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 5px; }
+    nav button { flex: 1; background: none; border: none; padding: 8px 5px; font-size: 12px; color: var(--text2); cursor: pointer; border-radius: 8px; font-weight: 500; transition: all .15s; }
+    nav button.active { background: var(--green); color: white; }
+    nav button:hover:not(.active) { background: var(--surface2); }
+    nav button.ai-nav.active { background: var(--purple); }
+
+    /* Sections */
+    .section { display: none; }
+    .section.active { display: block; }
+    .section-title { font-size: 16px; font-weight: 600; margin-bottom: 1rem; }
+
+    /* Stats */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+    .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; text-align: center; }
+    .stat .num { font-size: 28px; font-weight: 700; color: var(--green); }
+    .stat .lbl { font-size: 11px; color: var(--text2); margin-top: 3px; text-transform: uppercase; letter-spacing: .4px; }
+
+    /* Plant Cards */
+    .plants-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+    .plant-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.1rem; position: relative; }
+    .plant-card .p-icon { font-size: 32px; margin-bottom: 8px; display: block; }
+    .plant-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 3px; }
+    .plant-card .meta { font-size: 12px; color: var(--text2); margin-bottom: 10px; }
+    .badge { display: inline-block; font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 600; }
+    .badge.ok      { background: #EAF3DE; color: #3B6D11; }
+    .badge.due     { background: var(--amber-light); color: var(--amber-dark); }
+    .badge.overdue { background: var(--red-light);   color: var(--red-dark); }
+    .card-actions { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .btn-water { background: none; border: 1px solid var(--green); color: var(--green-dark); padding: 7px; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: 600; width: 100%; transition: background .15s; }
+    .btn-water:hover { background: var(--green-light); }
+    .btn-ai { background: none; border: 1px solid var(--purple); color: var(--purple-dark); padding: 7px; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: 600; width: 100%; transition: background .15s; }
+    .btn-ai:hover { background: var(--purple-light); }
+    .del-btn { position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 18px; cursor: pointer; color: var(--text3); }
+    .del-btn:hover { color: #E24B4A; }
+
+    /* Form */
+    .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; max-width: 500px; }
+    .form-row { margin-bottom: 14px; }
+    .form-row label { display: block; font-size: 13px; color: var(--text2); margin-bottom: 5px; font-weight: 500; }
+    .form-row input, .form-row select { width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: var(--surface); color: var(--text); outline: none; transition: border-color .15s; }
+    .form-row input:focus, .form-row select:focus { border-color: var(--green); }
+    .form-row .hint { font-size: 11px; color: var(--text3); margin-top: 4px; }
+    .btn-submit { background: var(--green); color: white; border: none; padding: 10px 22px; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 600; }
+    .btn-submit:hover { background: var(--green-dark); }
+    .alert { border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 14px; display: none; }
+    .alert.success { background: #EAF3DE; color: #3B6D11; border: 1px solid #C0DD97; }
+    .alert.error   { background: var(--red-light); color: var(--red-dark); }
+
+    /* Reminders */
+    .reminder-list { display: flex; flex-direction: column; gap: 10px; }
+    .reminder-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem; display: flex; align-items: center; gap: 14px; }
+    .r-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+    .r-icon.ok      { background: #EAF3DE; }
+    .r-icon.due     { background: var(--amber-light); }
+    .r-icon.overdue { background: var(--red-light); }
+    .r-info h4 { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+    .r-info p  { font-size: 12px; color: var(--text2); }
+    .r-action { margin-left: auto; flex-shrink: 0; }
+    .btn-sm { background: none; border: 1px solid var(--green); color: var(--green-dark); padding: 6px 13px; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: 600; white-space: nowrap; }
+    .btn-sm:hover { background: var(--green-light); }
+
+    /* Growth */
+    .growth-list { display: flex; flex-direction: column; gap: 10px; }
+    .growth-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.2rem; }
+    .growth-item h4 { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+    .progress-wrap { background: var(--surface2); border-radius: 20px; height: 10px; overflow: hidden; margin-bottom: 7px; }
+    .progress-bar  { height: 100%; border-radius: 20px; background: var(--green); transition: width .5s; }
+    .growth-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--text2); }
+
+    /* AI */
+    .ai-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; }
+    .ai-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .ai-header h3 { font-size: 16px; font-weight: 600; }
+    .ai-badge { background: var(--purple-light); color: var(--purple-dark); font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 600; }
+    .plant-select-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .plant-select-row label { font-size: 13px; color: var(--text2); white-space: nowrap; font-weight: 500; }
+    .plant-select-row select { flex: 1; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--surface); color: var(--text); outline: none; }
+    .quick-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px; }
+    .chip { background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 6px 13px; font-size: 12px; cursor: pointer; color: var(--text); transition: all .15s; font-weight: 500; }
+    .chip:hover { background: var(--purple-light); border-color: #AFA9EC; color: var(--purple-dark); }
+    .chat-area { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; min-height: 80px; }
+    .msg { padding: 11px 15px; border-radius: var(--radius-lg); font-size: 14px; line-height: 1.65; max-width: 90%; }
+    .msg.user { background: var(--purple-light); color: #26215C; align-self: flex-end; border-radius: var(--radius-lg) var(--radius-lg) 4px var(--radius-lg); }
+    .msg.ai   { background: var(--surface2); color: var(--text); align-self: flex-start; border-radius: 4px var(--radius-lg) var(--radius-lg) var(--radius-lg); }
+    .ai-label { font-size: 11px; color: var(--green-dark); font-weight: 700; margin-bottom: 4px; }
+    .thinking { background: var(--surface2); align-self: flex-start; padding: 12px 16px; border-radius: 4px var(--radius-lg) var(--radius-lg) var(--radius-lg); }
+    .dots span { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: bounce 1.2s infinite; margin-right: 3px; }
+    .dots span:nth-child(2) { animation-delay: .2s; }
+    .dots span:nth-child(3) { animation-delay: .4s; }
+    @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-7px)} }
+    .chat-input-row { display: flex; gap: 8px; }
+    .chat-input-row input { flex: 1; padding: 10px 13px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: var(--surface); color: var(--text); outline: none; }
+    .chat-input-row input:focus { border-color: var(--purple); }
+    .btn-send { background: var(--purple); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-size: 13px; cursor: pointer; font-weight: 600; }
+    .btn-send:hover { background: var(--purple-dark); }
+    .btn-send:disabled { background: var(--surface2); color: var(--text3); cursor: not-allowed; }
+
+    /* History */
+    .history-list { display: flex; flex-direction: column; gap: 10px; }
+    .history-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .9rem 1.1rem; }
+    .h-q { font-size: 13px; font-weight: 600; margin-bottom: 5px; }
+    .h-a { font-size: 13px; color: var(--text2); line-height: 1.6; }
+    .h-meta { font-size: 11px; color: var(--text3); margin-top: 6px; }
+
+    /* Utils */
+    .empty { text-align: center; padding: 3rem 1rem; color: var(--text2); font-size: 14px; }
+    .empty .big { font-size: 40px; margin-bottom: 10px; }
+    .loading { text-align: center; padding: 2rem; color: var(--text2); font-size: 14px; }
+
+    /* FastAPI badge */
+    .fastapi-badge { display: inline-flex; align-items: center; gap: 5px; background: #009688; color: white; font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 600; margin-left: 8px; }
+
+    @media (max-width: 600px) {
+      .stats { grid-template-columns: repeat(2,1fr); }
+      nav button { font-size: 11px; padding: 7px 3px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <svg viewBox="0 0 24 24"><path d="M12 2C8 2 5 5.5 5 9c0 2.8 1.5 5.2 3.8 6.5V22h6.4v-6.5C17.5 14.2 19 11.8 19 9c0-3.5-3-7-7-7zm0 2c2.8 0 5 2.7 5 5 0 2.3-1.4 4.3-3.5 5.3L13 14.8V20h-2v-5.2l-.5-.5C8.4 13.3 7 11.3 7 9c0-2.3 2.2-5 5-5z"/></svg>
+    </div>
+    <div class="header-text">
+      <h1>Smart Vertical Garden <span class="fastapi-badge">⚡ FastAPI</span></h1>
+      <p>Eco-friendly plant monitoring with AI advisor — Python backend</p>
+    </div>
+    <div class="api-status">
+      <div class="dot" id="api-dot"></div>
+      <span id="api-status-text">Connecting...</span>
+    </div>
+  </div>
+
+  <!-- Banner -->
+  <div class="eco-banner">
+    <span style="font-size:20px">♻️</span>
+    <p>Reused plastic bottles + Python FastAPI backend + Claude AI = smart sustainable gardening.</p>
+  </div>
+
+  <!-- Nav -->
+  <nav>
+    <button class="active"  onclick="showTab('dashboard')">🌿 Dashboard</button>
+    <button onclick="showTab('add')">➕ Add Plant</button>
+    <button onclick="showTab('reminders')">💧 Reminders</button>
+    <button onclick="showTab('growth')">📈 Growth</button>
+    <button class="ai-nav"  onclick="showTab('advisor')">✦ AI Advisor</button>
+    <button onclick="showTab('history')">🕐 History</button>
+  </nav>
+
+  <!-- Dashboard -->
+  <div id="dashboard" class="section active">
+    <div class="stats">
+      <div class="stat"><div class="num" id="s-total">-</div><div class="lbl">Total Plants</div></div>
+      <div class="stat"><div class="num" id="s-due">-</div><div class="lbl">Need Water</div></div>
+      <div class="stat"><div class="num" id="s-healthy">-</div><div class="lbl">Healthy</div></div>
+      <div class="stat"><div class="num" id="s-waterings">-</div><div class="lbl">Total Waterings</div></div>
+    </div>
+    <p class="section-title">My Garden</p>
+    <div class="plants-grid" id="plants-grid"><div class="loading">Loading plants...</div></div>
+  </div>
+
+  <!-- Add Plant -->
+  <div id="add" class="section">
+    <p class="section-title">Add a New Plant</p>
+    <div class="form-card">
+      <div id="add-ok"  class="alert success">✅ Plant added successfully!</div>
+      <div id="add-err" class="alert error"></div>
+      <div class="form-row"><label>Plant Name *</label><input type="text" id="f-name" placeholder="e.g. Mint, Tomato, Basil"></div>
+      <div class="form-row"><label>Plant Type</label>
+        <select id="f-type">
+          <option value="herb">Herb</option>
+          <option value="vegetable">Vegetable</option>
+          <option value="flower">Flower</option>
+          <option value="fruit">Fruit</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Bottle / Position</label>
+        <input type="text" id="f-position" placeholder="e.g. Row 1, Bottle 3">
+        <div class="hint">Label your reused plastic bottle position</div>
+      </div>
+      <div class="form-row"><label>Watering Frequency</label>
+        <select id="f-freq">
+          <option value="1">Every day</option>
+          <option value="2">Every 2 days</option>
+          <option value="3">Every 3 days</option>
+          <option value="7">Once a week</option>
+        </select>
+      </div>
+      <div class="form-row"><label>Sunlight Needs</label>
+        <select id="f-sunlight">
+          <option value="full">Full sun</option>
+          <option value="partial">Partial shade</option>
+          <option value="shade">Shade</option>
+        </select>
+      </div>
+      <button class="btn-submit" onclick="addPlant()">🌱 Add Plant</button>
+    </div>
+  </div>
+
+  <!-- Reminders -->
+  <div id="reminders" class="section">
+    <p class="section-title">Watering Reminders</p>
+    <div class="reminder-list" id="reminder-list"><div class="loading">Loading...</div></div>
+  </div>
+
+  <!-- Growth -->
+  <div id="growth" class="section">
+    <p class="section-title">Growth Tracker</p>
+    <div class="growth-list" id="growth-list"><div class="loading">Loading...</div></div>
+  </div>
+
+  <!-- AI Advisor -->
+  <div id="advisor" class="section">
+    <div class="ai-card">
+      <div class="ai-header">
+        <h3>Plant Care Advisor</h3>
+        <span class="ai-badge">Powered by Claude AI</span>
+      </div>
+      <div class="plant-select-row">
+        <label>Ask about:</label>
+        <select id="advisor-plant"><option value="general">General gardening</option></select>
+      </div>
+      <div class="quick-chips">
+        <div class="chip" onclick="askQuick('How often should I water this plant?')">💧 Watering tips</div>
+        <div class="chip" onclick="askQuick('What are common diseases for this plant and how to prevent them?')">🔍 Disease check</div>
+        <div class="chip" onclick="askQuick('What nutrients or fertilizer does this plant need?')">🌿 Fertilizer advice</div>
+        <div class="chip" onclick="askQuick('How much sunlight does this plant need daily?')">☀️ Sunlight needs</div>
+        <div class="chip" onclick="askQuick('How long does this plant take to grow fully?')">📅 Growth timeline</div>
+        <div class="chip" onclick="askQuick('Give me eco-friendly care tips for growing this in a reused plastic bottle.')">♻️ Eco tips</div>
+      </div>
+      <div class="chat-area" id="chat-area">
+        <div class="msg ai">
+          <div class="ai-label">AI Advisor</div>
+          Hello! I'm your Smart Garden AI running on Python FastAPI. Select a plant and ask me anything about plant care, watering, diseases, or eco-friendly gardening tips!
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <input type="text" id="chat-input" placeholder="Ask me anything about your plants..." onkeydown="if(event.key==='Enter') sendMsg()">
+        <button class="btn-send" id="send-btn" onclick="sendMsg()">Ask AI</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div id="history" class="section">
+    <p class="section-title">AI Chat History</p>
+    <div id="history-list"><div class="loading">Loading history...</div></div>
+  </div>
+
+</div>
+
+<script>
+  const API = 'http://localhost:8000/api';
+  const icons = { herb:'🌿', vegetable:'🥬', flower:'🌸', fruit:'🍓', other:'🌱' };
+
+  async function apiFetch(path, opts = {}) {
+    const res = await fetch(API + path, { headers: { 'Content-Type': 'application/json' }, ...opts });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || res.statusText);
+    }
+    return res.json();
+  }
+
+  async function checkServer() {
+    try {
+      await apiFetch('/health');
+      document.getElementById('api-dot').className = 'dot online';
+      document.getElementById('api-status-text').textContent = 'FastAPI online ⚡';
+    } catch {
+      document.getElementById('api-dot').className = 'dot offline';
+      document.getElementById('api-status-text').textContent = 'Server offline';
+    }
+  }
+
+  function daysSince(d) { return Math.floor((Date.now() - new Date(d)) / 86400000); }
+  function getStatus(p) {
+    const d = daysSince(p.lastWatered);
+    return d >= p.freq + 1 ? 'overdue' : d >= p.freq ? 'due' : 'ok';
+  }
+  function statusLabel(s) { return s === 'ok' ? 'Well watered' : s === 'due' ? 'Water today' : 'Overdue!'; }
+
+  const TABS = ['dashboard','add','reminders','growth','advisor','history'];
+  function showTab(id) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.querySelectorAll('nav button')[TABS.indexOf(id)].classList.add('active');
+    if (id === 'dashboard') loadDashboard();
+    if (id === 'reminders') loadReminders();
+    if (id === 'growth')    loadGrowth();
+    if (id === 'history')   loadHistory();
+    if (id === 'advisor')   loadAdvisorPlants();
+  }
+
+  async function loadDashboard() {
+    try {
+      const [plants, stats] = await Promise.all([apiFetch('/plants'), apiFetch('/stats')]);
+      document.getElementById('s-total').textContent     = stats.total;
+      document.getElementById('s-due').textContent       = stats.due + stats.overdue;
+      document.getElementById('s-healthy').textContent   = stats.healthy;
+      document.getElementById('s-waterings').textContent = stats.totalWaterings;
+      const grid = document.getElementById('plants-grid');
+      if (!plants.length) { grid.innerHTML = '<div class="empty"><div class="big">🌱</div><p>No plants yet. Add your first!</p></div>'; return; }
+      grid.innerHTML = plants.map(p => `
+        <div class="plant-card">
+          <button class="del-btn" onclick="deletePlant(${p.id})">×</button>
+          <span class="p-icon">${icons[p.type]||'🌱'}</span>
+          <h3>${p.name}</h3>
+          <div class="meta">${p.position} · ${p.sunlight} sun</div>
+          <span class="badge ${getStatus(p)}">${statusLabel(getStatus(p))}</span>
+          <div class="card-actions">
+            <button class="btn-water" onclick="waterPlant(${p.id})">💧 Mark Watered</button>
+            <button class="btn-ai"   onclick="askAboutPlant(${p.id})">✦ Ask AI about ${p.name}</button>
+          </div>
+        </div>`).join('');
+    } catch (e) {
+      document.getElementById('plants-grid').innerHTML = `<div class="empty"><div class="big">⚠️</div><p>Cannot connect to FastAPI backend.<br><small>Run: uvicorn main:app --reload</small></p></div>`;
+    }
+  }
+
+  async function loadReminders() {
+    const el = document.getElementById('reminder-list');
+    try {
+      const plants = await apiFetch('/plants');
+      if (!plants.length) { el.innerHTML = '<div class="empty"><div class="big">💧</div><p>No plants yet.</p></div>'; return; }
+      const sorted = [...plants].sort((a,b) => {
+        const o = { overdue:0, due:1, ok:2 };
+        return o[getStatus(a)] - o[getStatus(b)];
+      });
+      el.innerHTML = sorted.map(p => {
+        const s = getStatus(p), d = daysSince(p.lastWatered);
+        const msg = s === 'ok' ? `Watered ${d === 0 ? 'today' : d + ' day(s) ago'} — next in ${p.freq - d} day(s)`
+          : s === 'due' ? 'Due for watering today!' : 'Overdue! Please water now.';
+        return `<div class="reminder-item">
+          <div class="r-icon ${s}">${icons[p.type]||'🌱'}</div>
+          <div class="r-info"><h4>${p.name}</h4><p>${msg}</p></div>
+          ${s !== 'ok' ? `<div class="r-action"><button class="btn-sm" onclick="waterPlant(${p.id},true)">Water now</button></div>` : ''}
+        </div>`;
+      }).join('');
+    } catch { el.innerHTML = '<div class="empty"><div class="big">⚠️</div><p>Cannot load reminders.</p></div>'; }
+  }
+
+  async function loadGrowth() {
+    const el = document.getElementById('growth-list');
+    try {
+      const plants = await apiFetch('/plants');
+      if (!plants.length) { el.innerHTML = '<div class="empty"><div class="big">📈</div><p>No plants yet.</p></div>'; return; }
+      el.innerHTML = plants.map(p => {
+        const pct = Math.min(100, Math.round((p.growthDays / 30) * 100));
+        return `<div class="growth-item">
+          <h4>${icons[p.type]||'🌱'} ${p.name} <span style="font-weight:400;font-size:12px;color:var(--text2)">— ${p.position}</span></h4>
+          <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>
+          <div class="growth-meta"><span>${p.growthDays} days growing</span><span>${pct}% to maturity</span></div>
+          <div style="margin-top:8px;font-size:12px;color:var(--text2)">Watered ${p.wateredCount} times total</div>
+        </div>`;
+      }).join('');
+    } catch { el.innerHTML = '<div class="empty"><div class="big">⚠️</div><p>Cannot load growth data.</p></div>'; }
+  }
+
+  async function addPlant() {
+    const name = document.getElementById('f-name').value.trim();
+    const errEl = document.getElementById('add-err');
+    errEl.style.display = 'none';
+    if (!name) { errEl.textContent = 'Please enter a plant name.'; errEl.style.display = 'block'; return; }
+    try {
+      await apiFetch('/plants', {
+        method: 'POST',
+        body: JSON.stringify({
+          name,
+          type:     document.getElementById('f-type').value,
+          position: document.getElementById('f-position').value || 'Unassigned',
+          freq:     parseInt(document.getElementById('f-freq').value),
+          sunlight: document.getElementById('f-sunlight').value
+        })
+      });
+      document.getElementById('f-name').value = '';
+      document.getElementById('f-position').value = '';
+      const ok = document.getElementById('add-ok');
+      ok.style.display = 'block';
+      setTimeout(() => ok.style.display = 'none', 2500);
+    } catch (e) {
+      errEl.textContent = 'Error: ' + e.message;
+      errEl.style.display = 'block';
+    }
+  }
+
+  async function waterPlant(id, fromReminders = false) {
+    try {
+      await apiFetch(`/plants/${id}/water`, { method: 'POST' });
+      fromReminders ? loadReminders() : loadDashboard();
+    } catch { alert('Could not update watering.'); }
+  }
+
+  async function deletePlant(id) {
+    if (!confirm('Delete this plant?')) return;
+    try { await apiFetch(`/plants/${id}`, { method: 'DELETE' }); loadDashboard(); }
+    catch { alert('Could not delete plant.'); }
+  }
+
+  async function loadAdvisorPlants() {
+    try {
+      const plants = await apiFetch('/plants');
+      const sel = document.getElementById('advisor-plant');
+      const cur = sel.value;
+      sel.innerHTML = '<option value="general">General gardening</option>' +
+        plants.map(p => `<option value="${p.id}">${icons[p.type]||'🌱'} ${p.name}</option>`).join('');
+      if (plants.find(p => p.id == cur)) sel.value = cur;
+    } catch {}
+  }
+
+  function addMsg(role, text) {
+    const area = document.getElementById('chat-area');
+    const div = document.createElement('div');
+    div.className = 'msg ' + role;
+    div.innerHTML = role === 'ai' ? `<div class="ai-label">AI Advisor</div>${text}` : text;
+    area.appendChild(div);
+    area.scrollTop = area.scrollHeight;
+  }
+
+  function showThinking() {
+    const area = document.getElementById('chat-area');
+    const div = document.createElement('div');
+    div.className = 'thinking'; div.id = 'thinking';
+    div.innerHTML = '<div class="dots"><span></span><span></span><span></span></div>';
+    area.appendChild(div);
+    area.scrollTop = area.scrollHeight;
+  }
+
+  function hideThinking() { document.getElementById('thinking')?.remove(); }
+
+  async function sendMsg() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    await sendMsgWithText(text);
+  }
+
+  async function askQuick(q) { showTab('advisor'); setTimeout(() => sendMsgWithText(q), 200); }
+  async function askAboutPlant(id) {
+    showTab('advisor');
+    setTimeout(async () => {
+      document.getElementById('advisor-plant').value = id;
+      await sendMsgWithText('Give me complete care tips for this plant in my vertical bottle garden.');
+    }, 200);
+  }
+
+  async function sendMsgWithText(text) {
+    addMsg('user', text);
+    document.getElementById('send-btn').disabled = true;
+    showThinking();
+    try {
+      const data = await apiFetch('/ai/ask', {
+        method: 'POST',
+        body: JSON.stringify({ question: text, plant_id: document.getElementById('advisor-plant').value })
+      });
+      hideThinking();
+      addMsg('ai', data.answer);
+    } catch (e) {
+      hideThinking();
+      addMsg('ai', `Sorry, AI unavailable: ${e.message}. Make sure ANTHROPIC_API_KEY is set in .env`);
+    }
+    document.getElementById('send-btn').disabled = false;
+  }
+
+  async function loadHistory() {
+    const el = document.getElementById('history-list');
+    try {
+      const history = await apiFetch('/ai/history');
+      if (!history.length) { el.innerHTML = '<div class="empty"><div class="big">🕐</div><p>No AI conversations yet.</p></div>'; return; }
+      el.innerHTML = '<div class="history-list">' + history.map(h => `
+        <div class="history-item">
+          <div class="h-q">❓ ${h.question}</div>
+          <div class="h-a">${h.answer}</div>
+          <div class="h-meta">${h.plant_name || 'General'} · ${new Date(h.created_at).toLocaleString()}</div>
+        </div>`).join('') + '</div>';
+    } catch { el.innerHTML = '<div class="empty"><div class="big">⚠️</div><p>Cannot load history.</p></div>'; }
+  }
+
+  checkServer();
+  loadDashboard();
+</script>
+</body>
+</html>
