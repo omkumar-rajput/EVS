@@ -250,17 +250,30 @@ async def ask_ai(data: AIQuestion):
 
     if data.plant_id and data.plant_id != "general":
         with get_db() as db:
-            plant = db.execute("SELECT * FROM plants WHERE id = ?", (data.plant_id,)).fetchone()
+            plant = db.execute(
+                "SELECT * FROM plants WHERE id = ?",
+                (data.plant_id,)
+            ).fetchone()
+
         if plant:
             plant = dict(plant)
+
             now_ts = datetime.now(timezone.utc).timestamp()
-            last_ts = datetime.fromisoformat(plant["lastWatered"]).timestamp()
+            last_ts = datetime.fromisoformat(
+                plant["lastWatered"]
+            ).timestamp()
+
             days_since = int((now_ts - last_ts) / 86400)
+
             plant_context = (
-                f"Plant info — Name: {plant['name']}, Type: {plant['type']}, "
-                f"Position: {plant['position']}, Sunlight: {plant['sunlight']}, "
-                f"Watered every {plant['freq']} day(s), Last watered {days_since} day(s) ago, "
-                f"Growing for {plant['growthDays']} days, Total waterings: {plant['wateredCount']}. "
+                f"Plant info — Name: {plant['name']}, "
+                f"Type: {plant['type']}, "
+                f"Position: {plant['position']}, "
+                f"Sunlight: {plant['sunlight']}, "
+                f"Watered every {plant['freq']} day(s), "
+                f"Last watered {days_since} day(s) ago, "
+                f"Growing for {plant['growthDays']} days, "
+                f"Total waterings: {plant['wateredCount']}."
             )
 
     system_prompt = (
@@ -272,47 +285,66 @@ async def ask_ai(data: AIQuestion):
         + plant_context
     )
 
-if not OPENROUTER_API_KEY:
-    raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY not set in .env file")
-    
+    if not OPENROUTER_API_KEY:
+        raise HTTPException(
+            status_code=500,
+            detail="OPENROUTER_API_KEY not set in .env file"
+        )
+
     async with httpx.AsyncClient(timeout=30.0) as client:
-    response = await client.post(
-        "https://openrouter.ai/api/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json"
-        },
-        json={
-            "model": "deepseek/deepseek-chat:free",
-            "messages": [
-                {
-                    "role": "system",
-                    "content": system_prompt
-                },
-                {
-                    "role": "user",
-                    "content": data.question
-                }
-            ]
-        }
-    )
+        response = await client.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "deepseek/deepseek-chat:free",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": system_prompt
+                    },
+                    {
+                        "role": "user",
+                        "content": data.question
+                    }
+                ]
+            }
+        )
 
     if response.status_code != 200:
-        raise HTTPException(status_code=500, detail=f"Claude API error: {response.text}")
-        
-result = response.json()
-answer = result["choices"][0]["message"]["content"]
+        raise HTTPException(
+            status_code=500,
+            detail=f"OpenRouter API error: {response.text}"
+        )
+
+    result = response.json()
+
+    answer = result["choices"][0]["message"]["content"]
 
     plant_name = plant["name"] if plant else "General"
+
     now = datetime.now(timezone.utc).isoformat()
 
     with get_db() as db:
         db.execute(
-            "INSERT INTO ai_chat_history (plant_id, plant_name, question, answer, created_at) VALUES (?,?,?,?,?)",
-            (data.plant_id if data.plant_id != "general" else None, plant_name, data.question, answer, now)
+            "INSERT INTO ai_chat_history "
+            "(plant_id, plant_name, question, answer, created_at) "
+            "VALUES (?,?,?,?,?)",
+            (
+                data.plant_id if data.plant_id != "general" else None,
+                plant_name,
+                data.question,
+                answer,
+                now
+            )
         )
 
-    return {"answer": answer, "plant": plant_name}
+    return {
+        "answer": answer,
+        "plant": plant_name
+    }
 
 
 @app.get("/api/ai/history")
