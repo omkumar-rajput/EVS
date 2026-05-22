@@ -274,8 +274,8 @@ async def ask_ai(data: AIQuestion):
 
 if not OPENROUTER_API_KEY:
     raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY not set in .env file")
-
-async with httpx.AsyncClient(timeout=30.0) as client:
+    
+    async with httpx.AsyncClient(timeout=30.0) as client:
     response = await client.post(
         "https://openrouter.ai/api/v1/chat/completions",
         headers={
