@@ -299,7 +299,7 @@ async def ask_ai(data: AIQuestion):
                 "Content-Type": "application/json"
             },
             json={
-                "model": "google/gemma-2-9b-it:free",
+                "model": "openrouter/auto",
                 "messages": [
                     {
                         "role": "system",
