@@ -299,7 +299,7 @@ async def ask_ai(data: AIQuestion):
                 "Content-Type": "application/json"
             },
             json={
-                "model": "deepseek/deepseek-chat:free",
+                "model": "meta-llama/llama-3.1-8b-instruct:free",
                 "messages": [
                     {
                         "role": "system",
