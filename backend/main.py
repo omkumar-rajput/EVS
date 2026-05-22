@@ -21,7 +21,7 @@ app.add_middleware(
 )
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "garden.db")
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 
 # ── Database ──────────────────────────────────────────────────────
 
@@ -272,30 +272,36 @@ async def ask_ai(data: AIQuestion):
         + plant_context
     )
 
-    if not ANTHROPIC_API_KEY:
-        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY not set in .env file")
+if not OPENROUTER_API_KEY:
+    raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY not set in .env file")
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.post(
-            "https://api.anthropic.com/v1/messages",
-            headers={
-                "Content-Type": "application/json",
-                "x-api-key": ANTHROPIC_API_KEY,
-                "anthropic-version": "2023-06-01"
-            },
-            json={
-                "model": "claude-sonnet-4-20250514",
-                "max_tokens": 300,
-                "system": system_prompt,
-                "messages": [{"role": "user", "content": data.question}]
-            }
-        )
+async with httpx.AsyncClient(timeout=30.0) as client:
+    response = await client.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json"
+        },
+        json={
+            "model": "deepseek/deepseek-chat:free",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
+                    "role": "user",
+                    "content": data.question
+                }
+            ]
+        }
+    )
 
     if response.status_code != 200:
         raise HTTPException(status_code=500, detail=f"Claude API error: {response.text}")
-
-    result = response.json()
-    answer = "".join(b.get("text", "") for b in result.get("content", []))
+        
+result = response.json()
+answer = result["choices"][0]["message"]["content"]
 
     plant_name = plant["name"] if plant else "General"
     now = datetime.now(timezone.utc).isoformat()
