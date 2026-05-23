@@ -276,18 +276,19 @@ async def ask_ai(data: AIQuestion):
                 f"Total waterings: {plant['wateredCount']}."
             )
 
+
         with get_db() as db:
-        all_plants = db.execute(
-            "SELECT name, freq, lastWatered FROM plants"
-        ).fetchall()
-
-    garden_summary = ""
-
-    for p in all_plants:
-        garden_summary += (
-            f"Plant: {p['name']}, "
-            f"Water every {p['freq']} day(s). "
-        )
+            all_plants = db.execute(
+                "SELECT name, freq, lastWatered FROM plants"
+            ).fetchall()
+            
+        garden_summary = ""
+            
+        for p in all_plants:
+                garden_summary += (
+                    f"Plant: {p['name']}, "
+                    f"Water every {p['freq']} day(s). "
+             )
 
     system_prompt = (
         "You are a friendly expert plant care advisor for a Smart Vertical Garden project. "
