@@ -295,7 +295,7 @@ async def ask_ai(data: AIQuestion):
         "Give practical, concise advice. Use simple language suitable for students. "
         "Keep responses under 130 words. Use short paragraphs. "
         "Always connect advice to eco-friendly or sustainable gardening where relevant. "
-        + plant_context
+        + plant_context + garden_summary
     )
 
     if not OPENROUTER_API_KEY:
